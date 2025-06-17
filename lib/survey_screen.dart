@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:skinswift/survey_page.dart';
-import 'package:skinswift/survey_question.dart';
+import 'package:flutter/services.dart';
+import 'survey_page.dart';
+import 'survey_question.dart';
+import 'survey_data_service.dart';
+import 'survey_results_screen.dart';
 
 class SurveyScreen extends StatefulWidget {
   const SurveyScreen({super.key});
@@ -12,143 +15,160 @@ class SurveyScreen extends StatefulWidget {
 class _SurveyScreenState extends State<SurveyScreen> {
   final PageController _pageController = PageController();
   int _currentPageIndex = 0;
+  late List<List<SurveyQuestion>> _surveyPages;
+  late List<String?> _pageTitles;
 
-  final List<List<SurveyQuestion>> _surveyPages = [
-    [
-      SurveyQuestion(questionText: 'Acne', type: QuestionType.switchType),
-      SurveyQuestion(questionText: 'Aging', type: QuestionType.switchType),
-      SurveyQuestion(questionText: 'Dry Skin', type: QuestionType.switchType),
-      SurveyQuestion(questionText: 'Under eye', type: QuestionType.switchType),
-      SurveyQuestion(questionText: 'Sun protection', type: QuestionType.switchType),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'what is your age group?',
-        type: QuestionType.multiSelectionType,
-        options: ['<18', '18-29', '30-39', '40-49', '50-59', '60>'],
-      ),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'How does your skin feel an hour or two after washing your face?',
-        type: QuestionType.selectionType,
-        options: [
-          'Tight or dry',
-          'Normal, comfortable, not oily or dry',
-          'Oily or shiny, on forehead, nose',
-          'Oily in some areas only',
-        ],
-      ),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'How often does your skin get shiny during the day?',
-        type: QuestionType.selectionType,
-        options: [
-          'Rarely or never',
-          'Occasionally, on forehead and nose',
-          'Often, all over the face',
-          'Never',
-        ],
-      ),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'After cleansing, do you need to apply moisturizer immediately?',
-        type: QuestionType.selectionType,
-        options: [
-          'Yes',
-          'Sometimes, mostly on cheeks',
-          'Rarely, I feel comfortable without it',
-          'No, skin feels oily',
-        ],
-      ),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'How does your skin behave during the cold or dry weather?',
-        type: QuestionType.selectionType,
-        options: [
-          'Feels very dry, rough, flaky',
-          'Some areas get dry, some oily',
-          'No change or feels oily',
-          'Feels balanced, no big changes',
-        ],
-      ),
-    ],
-    [
-      SurveyQuestion(
-        questionText: 'Do you experience visible pores?',
-        type: QuestionType.selectionType,
-        options: [
-          'Not really',
-          'Large pores in T-zone',
-          'Large pores all over',
-          'Medium pores, mostly invisible',
-        ],
-      ),
-    ],
-    // Add more lists of SurveyQuestion for additional pages
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _surveyPages = SurveyDataService.getSurveyPages();
+    _pageTitles = SurveyDataService.getPageTitles();
+  }
 
   bool _isCurrentPageValid() {
-    for (var question in _surveyPages[_currentPageIndex]) {
-      if (question.type == QuestionType.selectionType &&
-          question.selectedOption == null) {
-        return false;
-      } else if (question.type == QuestionType.multiSelectionType &&
-          question.selectedOptions.isEmpty) {
+    final currentQuestions = _surveyPages[_currentPageIndex];
+
+    for (var question in currentQuestions) {
+      if (!question.isAnswered) {
         return false;
       }
     }
     return true;
   }
 
+  // This function will be called from SurveyPage when answers change
+  void _onAnswerChanged() {
+    setState(() {
+      // This will trigger a rebuild and update the continue button state
+    });
+  }
+
   void _goToNextPage() {
     if (!_isCurrentPageValid()) {
-      // Optionally show a message to the user that they need to select an option
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one option to continue.'),
-        ),
-      );
+      _showValidationMessage();
       return;
     }
+
     if (_currentPageIndex < _surveyPages.length - 1) {
+      // Add haptic feedback
+      HapticFeedback.lightImpact();
+
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
-        curve: Curves.easeIn,
+        curve: Curves.easeInOut,
       );
       setState(() {
         _currentPageIndex++;
       });
     } else {
-      // This is the last page, handle survey completion
-      print("Survey Completed!");
-      for (var pageQuestions in _surveyPages) {
-        for (var question in pageQuestions) {
-          if (question.type == QuestionType.switchType) {
-            print('${question.questionText}: ${question.value}');
-          } else if (question.type == QuestionType.selectionType) {
-            print('${question.questionText}: ${question.selectedOption}');
-          } else if (question.type == QuestionType.multiSelectionType) {
-            print('${question.questionText}: ${question.selectedOptions}');
-          }
-        }
-      }
+      // Survey completed
+      _completeSurvey();
     }
   }
 
   void _goToPreviousPage() {
     if (_currentPageIndex > 0) {
+      HapticFeedback.lightImpact();
+
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
-        curve: Curves.easeIn,
+        curve: Curves.easeInOut,
       );
       setState(() {
         _currentPageIndex--;
       });
     }
+  }
+
+  void _showValidationMessage() {
+    String message;
+    final currentQuestions = _surveyPages[_currentPageIndex];
+
+    // Check what type of validation failed
+    bool hasSelection = currentQuestions.any((q) => q.type == QuestionType.selectionType);
+    bool hasMultiSelection = currentQuestions.any((q) => q.type == QuestionType.multiSelectionType);
+
+    if (hasMultiSelection) {
+      message = 'Please select at least one option to continue.';
+    } else if (hasSelection) {
+      message = 'Please select an option to continue.';
+    } else {
+      message = 'Please complete all questions to continue.';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _completeSurvey() {
+    // Add completion haptic feedback
+    HapticFeedback.mediumImpact();
+
+    // Log survey results for debugging (remove in production)
+    _logSurveyResults();
+
+    // Navigate to results screen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => SurveyResultsScreen(
+          surveyData: _surveyPages,
+        ),
+      ),
+    );
+  }
+
+  void _logSurveyResults() {
+    // Use debugPrint instead of print for better debugging
+    debugPrint("=== SURVEY COMPLETED ===");
+    for (int pageIndex = 0; pageIndex < _surveyPages.length; pageIndex++) {
+      debugPrint("Page ${pageIndex + 1}:");
+      for (var question in _surveyPages[pageIndex]) {
+        debugPrint('  ${question.questionText}: ${question.answerAsString}');
+      }
+    }
+    debugPrint("========================");
+  }
+
+  // Handle back button press
+  Future<bool> _onWillPop() async {
+    if (_currentPageIndex > 0) {
+      _goToPreviousPage();
+      return false; // Don't exit the screen
+    } else {
+      // Show confirmation dialog for exiting survey
+      return await _showExitConfirmation() ?? false;
+    }
+  }
+
+  Future<bool?> _showExitConfirmation() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit Survey?'),
+        content: const Text('Your progress will be lost. Are you sure you want to exit?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -159,50 +179,40 @@ class _SurveyScreenState extends State<SurveyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _surveyPages.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageIndex = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                return SurveyPage(
-                  pageTitle: index == 0 ? 'What can we help you with?' : null,
-                  questions: _surveyPages[index],
-                  onContinue: _goToNextPage,
-                  onBack: index == 0 ? null : _goToPreviousPage,
-                  showContinueButton: _isCurrentPageValid(),
-                );
-              },
-            ),
-          ),
-          // Page indicators
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _surveyPages.length,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  width: 10.0,
-                  height: 10.0,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentPageIndex == index ? Colors.blue : Colors.grey,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: PageView.builder(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(), // Disable swipe navigation
+          itemCount: _surveyPages.length,
+          onPageChanged: (index) {
+            setState(() {
+              _currentPageIndex = index;
+            });
+          },
+          itemBuilder: (context, index) {
+            return SurveyPage(
+              pageTitle: _pageTitles[index],
+              questions: _surveyPages[index],
+              onContinue: _goToNextPage,
+              onBack: index == 0 ? null : _goToPreviousPage,
+              showContinueButton: _isCurrentPageValid(),
+              currentPage: index,
+              totalPages: _surveyPages.length,
+              onAnswerChanged: _onAnswerChanged, // Pass the callback
+            );
+          },
+        ),
       ),
     );
   }
-} 
+}
