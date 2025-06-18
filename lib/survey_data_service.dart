@@ -3,13 +3,13 @@ import 'package:skinswift/survey_question.dart';
 class SurveyDataService {
   static List<List<SurveyQuestion>> getSurveyPages() {
     return [
-      // Page 1: Skin Concerns
+      // Page 1: Skin Concerns - Changed to multi-selection
       [
-        SurveyQuestion(questionText: 'Acne', type: QuestionType.switchType),
-        SurveyQuestion(questionText: 'Aging', type: QuestionType.switchType),
-        SurveyQuestion(questionText: 'Dry Skin', type: QuestionType.switchType),
-        SurveyQuestion(questionText: 'Under eye', type: QuestionType.switchType),
-        SurveyQuestion(questionText: 'Sun protection', type: QuestionType.switchType),
+        SurveyQuestion(
+          questionText: 'What can we help you with?',
+          type: QuestionType.multiSelectionType,
+          options: ['Acne', 'Aging', 'Dry Skin', 'Under eye', 'Sun protection'],
+        ),
       ],
 
       // Page 2: Age Group
@@ -150,7 +150,7 @@ class SurveyDataService {
 
   static List<String?> getPageTitles() {
     return [
-      'What can we help you with?',
+      null, // The question text will be used as title for first page
       null,
       null,
       null,

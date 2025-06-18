@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'survey_question.dart';
 import 'survey_data_service.dart';
+import 'home_screen.dart';
+import 'package:skinswift/auth/login_or_register.dart';
 
 class SurveyResultsScreen extends StatelessWidget {
   final List<List<SurveyQuestion>> surveyData;
@@ -86,11 +88,17 @@ class SurveyResultsScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // Navigate to product recommendations or main app
-                  _showRecommendations(context, skinType);
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => LoginOrRegister(
+                        skinType: skinType,
+                        skinConcerns: skinConcerns,
+                      ),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: const Color(0xFF6B73FF),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -98,7 +106,7 @@ class SurveyResultsScreen extends StatelessWidget {
                   ),
                 ),
                 child: const Text(
-                  'Get My Recommendations',
+                  'Continue to Home',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -141,9 +149,9 @@ class SurveyResultsScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(25),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withAlpha(76)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,8 +188,8 @@ class SurveyResultsScreen extends StatelessWidget {
     final firstPage = surveyData.first;
 
     for (var question in firstPage) {
-      if (question.type == QuestionType.switchType && question.value) {
-        concerns.add(question.questionText);
+      if (question.type == QuestionType.multiSelectionType && question.selectedOptions.isNotEmpty) {
+        concerns.addAll(question.selectedOptions);
       }
     }
 
@@ -208,36 +216,5 @@ class SurveyResultsScreen extends StatelessWidget {
       }
     }
     return null;
-  }
-
-  void _showRecommendations(BuildContext context, String skinType) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Recommendations for $skinType Skin'),
-        content: Text(_getRecommendationsText(skinType)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it!'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getRecommendationsText(String skinType) {
-    switch (skinType) {
-      case 'Oily':
-        return 'Focus on gentle cleansing, oil-free moisturizers, and products with salicylic acid or niacinamide.';
-      case 'Dry':
-        return 'Use hydrating cleansers, rich moisturizers, and products with hyaluronic acid or ceramides.';
-      case 'Sensitive':
-        return 'Choose fragrance-free, gentle products with minimal ingredients. Patch test new products.';
-      case 'Combination':
-        return 'Use different products for different areas, or choose balanced formulas for combination skin.';
-      default:
-        return 'Maintain a consistent routine with gentle, suitable products for your skin type.';
-    }
   }
 }

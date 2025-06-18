@@ -1,7 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:skinswift/survey_screen.dart';
+import 'package:skinswift/auth/auth_gate.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const SkinSwiftApp());
 }
 
@@ -11,7 +17,7 @@ class SkinSwiftApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SkinSwift Survey',
+      title: 'SkinSwift',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -29,7 +35,7 @@ class SkinSwiftApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SurveyScreen(),
+      home: const AuthGate(),
     );
   }
 }
